@@ -25,5 +25,5 @@ jobs:
           LSPDAUTH_LSPDCLIENTSECRETKEY: ${{ secrets.LSPDAUTH_LSPDCLIENTSECRETKEY }}
           LSPDAUTH_LSPDREFRESHTOKEN: ${{ secrets.LSPDAUTH_LSPDREFRESHTOKEN }}
         run: |
-          Rscript your-script.R
+          Rscript InventoryGithubUpdate.R
 #test1
