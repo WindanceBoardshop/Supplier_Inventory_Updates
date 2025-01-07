@@ -1,1 +1,25 @@
+name: Run R Script with Secret
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-r-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install R Dependencies
+        run: |
+          Rscript -e 'install.packages(c("httr", "jsonlite", "sodium", "tidyverse", "httr2", "curl", "data.table", "jsonlite", "beepr", "readxl", "rio", "progress"))'
+
+      - name: Run R Script with Secret variables
+        env:
+          FACEBOOK_TOKEN: ${{ secrets.FACEBOOK_TOKEN }}
+        run: |
+          Rscript your-script.R
 #test1
