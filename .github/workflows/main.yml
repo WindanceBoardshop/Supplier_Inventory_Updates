@@ -19,7 +19,11 @@ jobs:
 
       - name: Run R Script with Secret variables
         env:
-          FACEBOOK_TOKEN: ${{ secrets.FACEBOOK_TOKEN }}
+          LSPDAUTH_LSPDACCESSTOKEN: ${{ secrets.LSPDAUTH_LSPDACCESSTOKEN }}
+          LSPDAUTH_LSPDAPINAME: ${{ secrets.LSPDAUTH_LSPDAPINAME }}
+          LSPDAUTH_LSPDCLIENTID: ${{ secrets.LSPDAUTH_LSPDCLIENTID }}
+          LSPDAUTH_LSPDCLIENTSECRETKEY: ${{ secrets.LSPDAUTH_LSPDCLIENTSECRETKEY }}
+          LSPDAUTH_LSPDREFRESHTOKEN: ${{ secrets.LSPDAUTH_LSPDREFRESHTOKEN }}
         run: |
           Rscript your-script.R
 #test1
