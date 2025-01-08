@@ -1,20 +1,15 @@
 # Part 0: Libraries
-install.packages(c("tidyverse", 
-                   "httr2", 
-                   "curl",
-                   "data.table",
-                   "jsonlite",
-                   "readxl",
-                   "rio",
-                   "sodium",
-                   "httr"))
+
 # LIbraries
 library(tidyverse)
 library(httr2)
 library(curl)
 library(data.table)
 library(jsonlite)
-
+library(readxl)
+library(rio)
+library(sodium)
+library(httr)
 
 # Load environment variabels
 
