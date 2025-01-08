@@ -6,6 +6,7 @@ on:
 jobs:
   run-r-script:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -14,10 +15,10 @@ jobs:
         uses: r-lib/actions/setup-r@v2
 
       - name: Install R Dependencies
-  run: |
-    Rscript --no-save --no-restore -e 'install.packages(c("httr", "jsonlite", "sodium", "tidyverse", "httr2", "curl", "data.table", "jsonlite", "beepr", "readxl", "rio", "progress"), lib = "/usr/local/lib/R/site-library")'
+        run: |
+          Rscript --no-save --no-restore -e 'install.packages(c("httr", "jsonlite", "sodium", "tidyverse", "httr2", "curl", "data.table", "beepr", "readxl", "rio", "progress"), lib = "/usr/local/lib/R/site-library")'
 
-      - name: Run R Script with Secret variables
+      - name: Run R Script with Secret Variables
         env:
           LSPDAUTH_LSPDACCESSTOKEN: ${{ secrets.LSPDAUTH_LSPDACCESSTOKEN }}
           LSPDAUTH_LSPDAPINAME: ${{ secrets.LSPDAUTH_LSPDAPINAME }}
@@ -26,4 +27,3 @@ jobs:
           LSPDAUTH_LSPDREFRESHTOKEN: ${{ secrets.LSPDAUTH_LSPDREFRESHTOKEN }}
         run: |
           Rscript InventoryGithubUpdate.R
-#test1
