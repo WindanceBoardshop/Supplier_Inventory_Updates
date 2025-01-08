@@ -248,7 +248,7 @@ AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF)
 url<- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json"
 
 payload <- list(
-  name = paste0(Sys.Date(), " Supplier Update Test"),
+  name = paste0(Sys.Date(), " Supplier Update"),
   shopID = "2"
 )
 
