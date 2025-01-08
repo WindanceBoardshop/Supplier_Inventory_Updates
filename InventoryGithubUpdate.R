@@ -1,20 +1,20 @@
 # Part 0: Libraries
-
+install.packages(c("tidyverse", 
+                   "httr2", 
+                   "curl",
+                   "data.table",
+                   "jsonlite",
+                   "readxl",
+                   "rio",
+                   "sodium",
+                   "httr"))
 # LIbraries
+library(tidyverse)
 library(httr2)
 library(curl)
 library(data.table)
 library(jsonlite)
-library(ggplot2)
-library(dplyr)    
-library(tidyr)  
-library(readr)    
-library(purrr)   
-library(tibble)   
-library(stringr)
-library(forcats)
-library(magrittr)
-library(glue)
+
 
 # Load environment variabels
 
