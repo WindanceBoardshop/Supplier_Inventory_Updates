@@ -388,8 +388,9 @@ print(i)
   # Print results
   cat("Remaining:", remaining, "\nTotal:", total, "\n")
   
-  if(remaining >= 79){
+if(remaining >= total-17){
     Sys.sleep(60)
+
   }
   
 }
