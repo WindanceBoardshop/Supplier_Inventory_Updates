@@ -1,4 +1,6 @@
 # Part 0: Libraries
+# define libs path
+.libPaths("/usr/local/lib/R/site-library")
 
 # LIbraries
 library(tidyverse)
@@ -7,7 +9,6 @@ library(curl)
 library(data.table)
 library(jsonlite)
 library(beepr)
-
 
 # Load environment variabels
 
