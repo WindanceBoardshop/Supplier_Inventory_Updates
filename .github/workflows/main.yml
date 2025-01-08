@@ -1,8 +1,9 @@
 name: Run R Script with Secret
 
 on:
-  workflow_dispatch:
-
+  schedule:
+    # Runs at 10:00 PM UTC every day
+    - cron: "0 22 * * *"
 jobs:
   run-r-script:
     runs-on: ubuntu-latest
