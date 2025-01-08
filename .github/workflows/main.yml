@@ -14,10 +14,20 @@ jobs:
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
 
-      - name: Install R Dependencies
-        run: |
-          Rscript --no-save --no-restore -e 'install.packages(c("httr", "jsonlite", "sodium", "tidyverse", "httr2", "curl", "data.table", "beepr", "readxl", "rio", "progress"), lib = "/usr/local/lib/R/site-library")'
-
+      - name: Install packages
+              uses: r-lib/actions/setup-r-dependencies@v2
+              with:
+                packages: |
+                  any::httr 
+                  any::jsonlite
+                  any::sodium
+                  any::tidyverse
+                  any::httr2
+                  any::curl
+                  any::data.table
+                  any::readxl
+                  any::rio
+                  
       - name: Run R Script with Secret Variables
         env:
           LSPDAUTH_LSPDACCESSTOKEN: ${{ secrets.LSPDAUTH_LSPDACCESSTOKEN }}
