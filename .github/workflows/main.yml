@@ -16,7 +16,6 @@ jobs:
 
       - name: Install packages
         run: |
-          R -e 'install.packages("tidyverse")'
           R -e 'install.packages("httr")'
           R -e 'install.packages("jsonlite")'
           R -e 'install.packages("sodium")'
@@ -25,6 +24,16 @@ jobs:
           R -e 'install.packages("data.table")'
           R -e 'install.packages("readxl")'
           R -e 'install.packages("rio")'
+          R -e 'install.packages("ggplot2")'
+          R -e 'install.packages("dplyr")'
+          R -e 'install.packages("tidyr")'
+          R -e 'install.packages("readr")'
+          R -e 'install.packages("purrr")'
+          R -e 'install.packages("tibble")'
+          R -e 'install.packages("stringr")'
+          R -e 'install.packages("forcats")'
+          R -e 'install.packages("magrittr")'
+          R -e 'install.packages("glue")'
 
       - name: Check R Library Paths
         run: |
