@@ -267,42 +267,18 @@ response <- request(url) %>%
 
 # get id for count
 
-# first I need to get the position of the count because i dont know the ID. 
+# this returns the counts with order created from most recent to least recent. ergo, the important one will always be number 1.
 
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?shopID=2&count=1'
-
-
-AccountResponse <- request(url) %>% 
-  req_headers(Authorization = paste0('Bearer ', LSPDAUTH$AccessToken)) %>% 
-  req_perform()
-
-resp_body_json(AccountResponse)
-
-
-CountPosition <- as.numeric(AccountResponse[["cache"]][["json-5f34400b59"]][["@attributes"]][["count"]])
-
-
-# now i have the position of the count in terms of the response
-# now i need to response
-
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?shopID=2'
-
-
-AccountResponse <- request(url) %>% 
-  req_headers(Authorization = paste0('Bearer ', LSPDAUTH$AccessToken)) %>% 
-  req_perform()
-
-resp_body_json(AccountResponse)
-
-
-#now i need to get the ID of the count from the position it is in the count. 
-
-
-InventoryCountID <- AccountResponse[["cache"]][["json-5f34400b59"]][["InventoryCount"]][[CountPosition]][["inventoryCountID"]]
-
-
-
-# Notes: I want to update this so that when there are more than 100 items it can paginate to the last item of the last page.  
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?shopID=2&sort=-inventoryCountID'
+ 
+ AccountResponse <- request(url) %>% 
+   req_headers(Authorization = paste0('Bearer ', LSPDAUTH$AccessToken)) %>% 
+   req_perform()
+ 
+ resp_body_json(AccountResponse)
+ 
+ InventoryCountID <- AccountResponse[["cache"]][["json-5f34400b59"]][["InventoryCount"]][[1]][["inventoryCountID"]]
+ 
 
 
 
