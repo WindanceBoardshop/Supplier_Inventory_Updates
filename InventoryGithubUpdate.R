@@ -1,6 +1,4 @@
 # Part 0: Libraries
-# define libs path
-.libPaths("/usr/local/lib/R/site-library")
 
 # LIbraries
 library(httr2)
