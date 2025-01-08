@@ -3,12 +3,20 @@
 .libPaths("/usr/local/lib/R/site-library")
 
 # LIbraries
-library(tidyverse)
 library(httr2)
 library(curl)
 library(data.table)
 library(jsonlite)
-library(beepr)
+library(ggplot2)
+library(dplyr)    
+library(tidyr)  
+library(readr)    
+library(purrr)   
+library(tibble)   
+library(stringr)
+library(forcats)
+library(magrittr)
+library(glue)
 
 # Load environment variabels
 
