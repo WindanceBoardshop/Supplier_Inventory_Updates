@@ -16,15 +16,15 @@ jobs:
 
       - name: Install packages
         run: |
-          R -e 'install.packages("tidyverse", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("httr", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("jsonlite", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("sodium", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("httr2", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("curl", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("data.table", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("readxl", lib = "/usr/local/lib/R/site-library")'
-          R -e 'install.packages("rio", lib = "/usr/local/lib/R/site-library")'
+          R -e 'install.packages("tidyverse")'
+          R -e 'install.packages("httr")'
+          R -e 'install.packages("jsonlite")'
+          R -e 'install.packages("sodium")'
+          R -e 'install.packages("httr2")'
+          R -e 'install.packages("curl")'
+          R -e 'install.packages("data.table")'
+          R -e 'install.packages("readxl")'
+          R -e 'install.packages("rio")'
 
       - name: Check R Library Paths
         run: |
