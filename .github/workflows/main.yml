@@ -2,8 +2,8 @@ name: Run R Script with Secret
 
 on:
   schedule:
-    # Runs at 10:00 PM UTC every day
-    - cron: '0 22 * * *'
+    # Runs at 10:00 PM PST every day cron is in UTC time zone 
+    - cron: '0 6 * * *'
 jobs:
   run-r-script:
     runs-on: ubuntu-latest
