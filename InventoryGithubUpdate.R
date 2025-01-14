@@ -12,6 +12,7 @@ library(sodium)
 library(httr)
 
 # Load environment variabels
+print('Load environment variabels')
 
 LSPDAUTH <- list()
 LSPDAUTH$LSPDApiName <- Sys.getenv("LSPDAUTH_LSPDAPINAME")
@@ -32,6 +33,8 @@ LSPDAUTH$AccessToken <- Sys.getenv("LSPDAUTH_LSPDACCESSTOKEN")
 
 # get new access token
 
+print('Lightspeed Authenitcation Flow.')
+
 token_url <- "https://cloud.lightspeedapp.com/auth/oauth/token"
 
 body <- list(
@@ -49,6 +52,7 @@ response <- request(token_url) %>%
 response_content <- resp_body_json(response)
 
 #update access token in LSPDAUTH
+print('update access token in LSPDAUTH')
 
 LSPDAUTH$AccessToken<- response_content$access_token
 LSPDAUTH$LSPDRefreshToken <- response_content$refresh_token
@@ -57,6 +61,7 @@ LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
 
 
 # Part 2: getting product data From Brands. 
+print('Part 2: getting product data From Brands')
 
 # baks is 274
 
@@ -92,6 +97,7 @@ LSPDinfo$WarehouseID <- 2
 
 ## Ezzy
 # Get ezzy info from LSDP
+print('Ezzy info')
 
 url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=142'
 
@@ -155,7 +161,7 @@ EzzyItemsDF <- EzzyItemsDF %>%
 # get FOne data from LSPD while loop
 
 # Initialize url with the first value
-
+print('F-one info')
 
 url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=274'
 
@@ -241,7 +247,7 @@ AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF)
 
 
 # Part 5: creating a new count, adding items to the count, reconciling the count. 
-
+print('Part 5: creating a new count, adding items to the count, reconciling the count')
 #  create new count
 
 # this works 
@@ -372,12 +378,13 @@ if(remaining >= total-17){
 }
 
 
-
+print('added all items to the count')
 
 # now I need to reconcile the inventory count. 
 # reconcile inventory count
 
 # that was easy. 
+
 
 url <- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCountReconcile.json"
 
@@ -395,7 +402,7 @@ response <- request(url) %>%
   req_perform()
 
 
-
+print('reconciled the count')
 #################################################################################
 
 # Update github secrets with new tokens. 
@@ -410,15 +417,9 @@ response <- request(url) %>%
 # Github information and variables. load these variables from the system environment
 
 # keep this for github to run
-# GH$REPO_OWNER <- Sys.getenv("GH_REPO_OWNER")
-# GH$REPO_NAME <- Sys.getenv("GH_REPO_NAME")
-# GH$PAT <- Sys.getenv("GH_PAT")
-
-# Use this to run in R
-GH <- list()
-GH$REPO_OWNER <- "WindanceBoardshop"
-GH$REPO_NAME <- "Supplier_Inventory_Updates"
-GH$PAT <- "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"
+GH$REPO_OWNER <- Sys.getenv("GH_REPO_OWNER")
+GH$REPO_NAME <- Sys.getenv("GH_REPO_NAME")
+GH$PAT <- Sys.getenv("GH_PAT")
 
 
 # Construct the URL dynamically
@@ -450,7 +451,7 @@ GH$KEY_ID <- public_key_data$key_id
 
 #######################################################
 
-
+print('update LSPD tokens in github')
 # First do the refresh token
 
 # Step 1: Encrypt the secret value using LibSodium
