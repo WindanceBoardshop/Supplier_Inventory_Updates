@@ -10,6 +10,7 @@ library(readxl)
 library(rio)
 library(sodium)
 library(httr)
+library(openssl)
 
 # Load environment variabels
 print('Load environment variabels')
