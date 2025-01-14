@@ -396,4 +396,110 @@ response <- request(url) %>%
 
 
 
+#################################################################################
+
+# Update github secrets with new tokens. 
+###################################################################################
+
+###################################################################################
+# update values in github
+###################################################################################
+
+# start of Github Var updates
+
+# Github information and variables. load these variables from the system environment
+
+# keep this for github to run
+# GH$REPO_OWNER <- Sys.getenv("GH_REPO_OWNER")
+# GH$REPO_NAME <- Sys.getenv("GH_REPO_NAME")
+# GH$PAT <- Sys.getenv("GH_PAT")
+
+# Use this to run in R
+GH <- list()
+GH$REPO_OWNER <- "WindanceBoardshop"
+GH$REPO_NAME <- "Supplier_Inventory_Updates"
+GH$PAT <- "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"
+
+
+# Construct the URL dynamically
+url <- paste0("https://api.github.com/repos/", 
+              GH$REPO_OWNER, "/", 
+              GH$REPO_NAME,
+              "/actions/secrets/public-key")
+
+# Make the API request to fetch the public key
+response <- request(url) %>%
+  req_auth_bearer_token(GH$PAT) %>%
+  req_headers(Accept = "application/vnd.github+json") %>%
+  req_perform()
+
+# Parse the JSON response
+public_key_data <- resp_body_json(response)
+
+# Extract the public key and key ID
+GH$PUBLIC_KEY <- public_key_data$key
+GH$KEY_ID <- public_key_data$key_id
+
+#####################################################################################
+#got the keys now upload the LSPD tokens. 
+
+
+
+
+# Encrypt the tokens values with Sodium
+
+#######################################################
+
+
+# First do the refresh token
+
+# Step 1: Encrypt the secret value using LibSodium
+# values can not be in lists or dfs. 
+
+refresh_token <- charToRaw(LSPDAUTH$LSPDRefreshToken)
+public_key <- base64_decode(GH$PUBLIC_KEY)
+
+GH$LSPD_REFRESH_TOKEN <- simple_encrypt(refresh_token, public_key)
+
+# Base64 encode the encrypted secret
+GH$LSPD_REFRESH_TOKEN <- base64enc::base64encode(GH$LSPD_REFRESH_TOKEN)
+
+
+###################################################
+
+# Step 2: Prepare the payload
+payload <- list(
+  encrypted_value = GH$LSPD_REFRESH_TOKEN,
+  key_id = GH$KEY_ID)
+
+# Step 3: Make the API request to update the secret
+secret_url <- paste0("https://api.github.com/repos/", GH$REPO_OWNER, "/", GH$REPO_NAME, "/actions/secrets/", 'LSPDAUTH_LSPDREFRESHTOKEN')
+
+response_secret <- request(secret_url) %>%
+  req_auth_bearer_token(GH$PAT) %>%
+  req_method("PUT") %>%
+  req_headers(
+    Accept = "application/vnd.github+json") %>%
+  req_body_json(payload) %>%
+  req_perform()
+
+# Step 5: Check the response
+if (resp_status(response_secret) == 201) {
+  print("Secret created successfully!")
+} else if (resp_status(response_secret) == 204) {
+  print("Secret updated successfully!")
+} else {
+  print("Failed to create/update secret: ", resp_body_string(response_secret))
+}
+
+
+
+# now do the Access Token. (this probably isnt important because we make a new one each time. )
+
+
+
+
+
+
+
 
