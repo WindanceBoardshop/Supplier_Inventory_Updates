@@ -38,5 +38,8 @@ jobs:
           LSPDAUTH_LSPDCLIENTID: ${{ secrets.LSPDAUTH_LSPDCLIENTID }}
           LSPDAUTH_LSPDCLIENTSECRETKEY: ${{ secrets.LSPDAUTH_LSPDCLIENTSECRETKEY }}
           LSPDAUTH_LSPDREFRESHTOKEN: ${{ secrets.LSPDAUTH_LSPDREFRESHTOKEN }}
+          GH_REPO_OWNER: ${{ vars.GH_REPO_OWNER}}
+          GH_PAT: ${{ secrets.GH_PAT}}
+          GH_REPO_NAME: ${{ vars.GH_REPO_NAME}}
         run: |
           Rscript InventoryGithubUpdate.R
