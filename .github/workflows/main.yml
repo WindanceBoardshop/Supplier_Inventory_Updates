@@ -2,8 +2,9 @@ name: Run R Script with Secret
 
 on:
   schedule:
-    # Runs at 10:00 PM PST every day cron is in UTC time zone 
-    - workflow_dispatch:
+    # Runs at 10:00 PM PST every day (cron is in UTC time zone)
+    - cron: '06 06 * * *'
+  workflow_dispatch: # Allows manual trigger of the workflow
 jobs:
   run-r-script:
     runs-on: ubuntu-latest
