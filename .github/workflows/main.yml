@@ -31,6 +31,7 @@ jobs:
             any::rio
             any::sodium
             any::httr
+            any::openssl
 
       - name: Run R Script with Secret Variables
         env:
