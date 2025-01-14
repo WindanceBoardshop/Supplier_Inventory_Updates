@@ -417,6 +417,7 @@ print('reconciled the count')
 # Github information and variables. load these variables from the system environment
 
 # keep this for github to run
+GH <- list()
 GH$REPO_OWNER <- Sys.getenv("GH_REPO_OWNER")
 GH$REPO_NAME <- Sys.getenv("GH_REPO_NAME")
 GH$PAT <- Sys.getenv("GH_PAT")
