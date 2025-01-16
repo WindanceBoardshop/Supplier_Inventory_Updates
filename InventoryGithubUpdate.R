@@ -236,14 +236,131 @@ FoneItemsDF <- FoneItemsDF %>%
   mutate(itemID = as.character(itemID), #change data type
          Inventory = as.character(Inventory)) #change data type
 
+# end of Fone Data
+#########################################
+# check token time left
 
+if(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()) <= 30){
+  
+  Sys.sleep(60)
+  
+  print('Updating Token') 
+  #get new access token
+  
+  token_url <- "https://cloud.lightspeedapp.com/auth/oauth/token"
+  
+  body <- list(
+    refresh_token = LSPDAUTH$LSPDRefreshToken,
+    client_id = LSPDAUTH$LSPDClientID,
+    client_secret = LSPDAUTH$LSPDClientSecretKey,
+    grant_type = 'refresh_token'
+  )
+  
+  response <- request(token_url) %>% 
+    req_body_json(body) %>% 
+    req_method('POST') %>% 
+    req_perform()
+  
+  response_content <- resp_body_json(response)
+  
+  #update access token in LSPDAUTH
+  
+  LSPDAUTH$AccessToken<- response_content$access_token
+  LSPDAUTH$LSPDRefreshToken <- response_content$refresh_token
+  
+  LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
+  
+  
+}else(print(paste0('token has ',round(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()),2), ' seconds left' )))
+
+
+# end of check token time left
+# end of cheeck bucket level
+########################################
+
+# Start of North and Mystic Data
+# North Mystic from brand products
+
+# download data from link
+
+
+
+# download LSPD data from API. vendor = 275 and 235. 
+
+WarehouseNorth <- read.csv('http://b2busa.northasg.com/export_stock_csv')
+
+
+WarehouseNorth$ean <-  format(WarehouseNorth$ean, scientific = FALSE)
+
+WarehouseNorth <- WarehouseNorth %>% 
+  select(stock, ean)
+
+# get info from LSPD 
+
+# Initialize url with the first value
+print('North and Mystic info')
+
+
+# the IN filter allows to search for multiple vendors. should consolidate all of the vendor calls. 
+
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[275,235]'
+
+NorthItemsDF <- list()
+
+# Loop until url is empty
+while (url != "") {
+  # Make the request to the API
+  AccountResponse <- request(url) %>% #endpoint
+    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
+    req_perform() %>% #perform the action 
+    resp_body_json() #format the response
+  
+  
+  NorthItemsDF <- append(NorthItemsDF, AccountResponse$Item)
+  
+  
+  # Update url for the next iteration
+  url <- AccountResponse[["@attributes"]][["next"]]
+  Sys.sleep(3)
+}
+
+#turn data in tibble
+
+NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble))
+
+#remove unnecessary  info
+
+NorthItemsDF <- NorthItemsDF %>% 
+  select(itemID, ean) %>% 
+  filter(ean != '') %>% 
+  distinct(ean, .keep_all = T) %>%  #checks for duplicates
+  mutate(ean = format(ean, scientific = FALSE))
+# now merge the dataset and exclude all North items that arent in the system yet. 
+
+NorthItemsDF$isinwarehouse <- NorthItemsDF$ean %in% WarehouseNorth$ean
+
+# wrangel North data and merge with LSPD 
+
+NorthItemsDF <- NorthItemsDF %>% 
+  filter(isinwarehouse==T) %>% #remove all products not in LSPD
+  select(ean, itemID) %>%  # keep relevant columns 
+  left_join(WarehouseNorth, by = 'ean') %>% #merge warehouse data into LSPD data
+  mutate(Inventory = stock) %>% # change names
+  filter(!is.na(Inventory)) %>% # remove all NA inventory values
+  select(itemID, Inventory) %>% # keep only relevant items
+  mutate(itemID = as.character(itemID), #change data type
+         Inventory = as.character(Inventory)) #change data type
+
+
+# end of North mystic Data things
+#########################################
 
 # Merge all datasets to upload
 
 
 # right now this includes Fone and Ezzy invntory
 
-AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF)
+AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF, NorthItemsDF)
 
 
 
@@ -303,7 +420,7 @@ url <- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCountItem.j
 for(i in 1:nrow(AllWarehouseinventory)) {
   # check to see how much time is left on the access token, if there is 5 seconds or less get a new access token. the system will sleep for a minute to make sure 
   
-  if(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()) <= 5){
+  if(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()) <= 30){
     
     Sys.sleep(60)
     
@@ -357,7 +474,7 @@ for(i in 1:nrow(AllWarehouseinventory)) {
   # rinse and repeat 
 print(i)
   ##############
-  
+  # check LSPD bucket level
   # The header value
   bucket_level <- response[["headers"]][["x-ls-api-bucket-level"]]
   
