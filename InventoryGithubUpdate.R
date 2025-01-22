@@ -1,5 +1,13 @@
 # Part 0: Libraries
 
+# steps to do: 
+# set up automated email
+# add Email variables to github
+# add Email vairables to yaml file
+# add sys.getenv() for email variables int R script 
+# get email to work 
+
+
 # LIbraries
 library(tidyverse)
 library(httr2)
@@ -11,6 +19,7 @@ library(rio)
 library(sodium)
 library(httr)
 library(openssl)
+library(blastula)
 
 # Load environment variabels
 print('Load environment variabels')
@@ -130,7 +139,7 @@ EzzyItemsDF <- bind_rows(lapply(EzzyItemsDF, as_tibble))
 #remove unnecessary  info
 
 EzzyItemsDF <- EzzyItemsDF %>% 
-  select(itemID, manufacturerSku) %>% 
+  select(systemSku, manufacturerSku) %>% 
   filter(manufacturerSku != '') %>% 
   distinct(manufacturerSku, .keep_all = T) #checks for duplicates
 
@@ -147,12 +156,12 @@ EzzyItemsDF$isinwarehouse <- EzzyItemsDF$manufacturerSku %in% WarehouseEzzy$SKU
 # data wrangeling
 EzzyItemsDF <- EzzyItemsDF %>% 
   filter(isinwarehouse==T) %>% # remove all rows that arent in LSPD
-  select(manufacturerSku, itemID) %>%  # remove all cols that arent important 
+  select(manufacturerSku, systemSku) %>%  # remove all cols that arent important 
   left_join(WarehouseEzzy[,c('Inventory','SKU')], by = c('manufacturerSku'='SKU')) %>% #merge ezzy warehouse data with LSPD data
   mutate(Inventory = .[[3]]) %>% #naming convensions
   filter(!is.na(Inventory)) %>% #remove NA values
-  select(itemID, Inventory) %>% # Formatting
-  mutate(itemID = as.character(itemID),  # change data types
+  select(systemSku, Inventory) %>% # Formatting
+  mutate(systemSku = as.character(systemSku),  # change data types
          Inventory = as.character(Inventory)) #change data types
 
 
@@ -191,7 +200,7 @@ FoneItemsDF <- bind_rows(lapply(FoneItemsDF, as_tibble))
 #remove unnecessary  info
 
 FoneItemsDF <- FoneItemsDF %>% 
-  select(itemID, ean) %>% 
+  select(systemSku, ean) %>% 
   filter(ean != '') %>% 
   distinct(ean, .keep_all = T) #checks for duplicates
 
@@ -228,12 +237,12 @@ FoneItemsDF$isinwarehouse <- FoneItemsDF$ean %in% WarehouseFone$EAN
 
 FoneItemsDF <- FoneItemsDF %>% 
   filter(isinwarehouse==T) %>% #remove all products not in LSPD
-  select(ean, itemID) %>%  # keep relevant columns 
+  select(ean, systemSku) %>%  # keep relevant columns 
   left_join(WarehouseFone, by = c('ean' = 'EAN')) %>% #merge warehouse data into LSPD data
   mutate(Inventory = .[[3]]) %>% # change names
   filter(!is.na(Inventory)) %>% # remove all NA inventpry values
-  select(itemID, Inventory) %>% # keep only relevant items
-  mutate(itemID = as.character(itemID), #change data type
+  select(systemSku, Inventory) %>% # keep only relevant items
+  mutate(systemSku = as.character(systemSku), #change data type
          Inventory = as.character(Inventory)) #change data type
 
 # end of Fone Data
@@ -343,12 +352,12 @@ NorthItemsDF$isinwarehouse <- NorthItemsDF$ean %in% WarehouseNorth$ean
 
 NorthItemsDF <- NorthItemsDF %>% 
   filter(isinwarehouse==T) %>% #remove all products not in LSPD
-  select(ean, itemID) %>%  # keep relevant columns 
+  select(ean, systemSku) %>%  # keep relevant columns 
   left_join(WarehouseNorth, by = 'ean') %>% #merge warehouse data into LSPD data
   mutate(Inventory = stock) %>% # change names
   filter(!is.na(Inventory)) %>% # remove all NA inventory values
-  select(itemID, Inventory) %>% # keep only relevant items
-  mutate(itemID = as.character(itemID), #change data type
+  select(systemSku, Inventory) %>% # keep only relevant items
+  mutate(systemSku = as.character(systemSku), #change data type
          Inventory = as.character(Inventory)) #change data type
 
 
@@ -403,124 +412,75 @@ url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?
  
  InventoryCountID <- AccountResponse[["cache"]][["json-5f34400b59"]][["InventoryCount"]][[1]][["inventoryCountID"]]
  
+##################################################################################
+ 
+ # write data to file
+ # email file to windance@windance.com 
+ # include link to the count
+ # Include Instructions
+ # include name of the count
+ 
+ 
+ write_csv2(x = AllWarehouseinventory, file = 'Supplier_Inventory.csv')
+ 
+ # setup to send email
+ 
+ create_smtp_creds_file(
+   file = "smtp_creds",
+   user = "jasonelder@windance.com",
+   provider = "office365",
+   host = "smtp.office365.com",
+   port = 587,
+   use_ssl = FALSE
+ )
+ 
+ 
+ # body of the email
+ 
+ email <- compose_email(
+   body = md("Good Morning, \n\n Please upload the attached Supplier inventory file to \n
+             the Lightspeed Supplier Invenotry Count.\n
+             Please Follow These Steps: \n
+             1. Login To Lightspeed \n
+             2. Navigate to Inventory > Inventory Counts and select Supplier Warehouse \n
+             3. Or you can follow [this link](https://us.merchantos.com/?name=inventory_count.listings.inventory_counts&form_name=listing&searchstr=&shop_id=2&archived=off&__sort=last_modified&__sort_dir=DESC). \n
+             4. Upload the file \n
+             5. Zero out all other products in `Missed` \n
+             6. Reconcile the count \n\n
+             Thank You, \n 
+             Windance")
+ )
+ 
+ email <- email %>%
+   add_attachment(file = "Supplier_Inventory.csv")
+ 
+ 
+ 
+ 
+ 
+ email %>%
+   smtp_send(
+     from = "jasonelder@windance.com",
+     to = "windance@windance.com",
+     subject = "Demo Output File",
+     credentials = creds(
+       user = "jasonelder@windance.com",
+       pass = "wrangletiall",
+       host = "smtp.office365.com",
+       port = 587,
+       use_ssl = FALSE
+     )
+   )
+ 
+ 
 
-
-
-# USe this, it will put all the stock info in lspd inventory count. it takes a while but thats necessary so that it doesnt over load the system. 
-
-# adding items to inventory count useing Allwarehouseinventory
-
-# Define the API URL
-url <- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCountItem.json"
-
-# Define the JSON payload
-
-# post each item individually (pain in the butt) but it works!!!!!!!!!!!!
-
-for(i in 1:nrow(AllWarehouseinventory)) {
-  # check to see how much time is left on the access token, if there is 5 seconds or less get a new access token. the system will sleep for a minute to make sure 
-  
-  if(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()) <= 30){
-    
-    Sys.sleep(60)
-    
-    print('Updating Token') 
-    #get new access token
-    
-    token_url <- "https://cloud.lightspeedapp.com/auth/oauth/token"
-    
-    body <- list(
-      refresh_token = LSPDAUTH$LSPDRefreshToken,
-      client_id = LSPDAUTH$LSPDClientID,
-      client_secret = LSPDAUTH$LSPDClientSecretKey,
-      grant_type = 'refresh_token'
-    )
-    
-    response <- request(token_url) %>% 
-      req_body_json(body) %>% 
-      req_method('POST') %>% 
-      req_perform()
-    
-    response_content <- resp_body_json(response)
-    
-    #update access token in LSPDAUTH
-    
-    LSPDAUTH$AccessToken<- response_content$access_token
-    LSPDAUTH$LSPDRefreshToken <- response_content$refresh_token
-    
-    LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
-    
-    
-  }
-  
-  # define information about the first item in the data frame. format as list. 
-  payload <- list(
-    qty = AllWarehouseinventory$Inventory[i],
-    inventoryCountID = InventoryCountID,
-    itemID = AllWarehouseinventory$itemID[i],
-    employeeID = '35'
-  )
-  
-  # Make the POST request for that item. 
-  response <- request(url) %>%
-    req_headers(
-      Authorization = paste0("Bearer ", LSPDAUTH$AccessToken),
-      `Content-Type` = "application/json"
-    ) %>%
-    req_body_json(payload) %>%
-    req_method("POST") %>%
-    req_perform()
-  # check to see if the access token is still working
-  # rinse and repeat 
-print(i)
-  ##############
-  # check LSPD bucket level
-  # The header value
-  bucket_level <- response[["headers"]][["x-ls-api-bucket-level"]]
-  
-  # Split the string at the "/" to separate remaining and total
-  parts <- strsplit(bucket_level, "/")[[1]]
-  
-  # Convert both parts to numeric
-  remaining <- as.numeric(parts[1])  # Remaining bucket level
-  total <- as.numeric(parts[2])      # Total bucket capacity
-  
-  # Print results
-  cat("Remaining:", remaining, "\nTotal:", total, "\n")
-  
-if(remaining >= total-17){
-    Sys.sleep(60)
-
-  }
-  
-}
-
-
-print('added all items to the count')
-
-# now I need to reconcile the inventory count. 
-# reconcile inventory count
-
-# that was easy. 
-
-
-url <- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCountReconcile.json"
-
-payload <- list(
-  inventoryCountID = InventoryCountID
-)
-
-response <- request(url) %>%
-  req_headers(
-    Authorization = paste0("Bearer ", LSPDAUTH$AccessToken),
-    `Content-Type` = "application/json"
-  ) %>%
-  req_body_json(payload) %>%
-  req_method("POST") %>%
-  req_perform()
-
-
-print('reconciled the count')
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 #################################################################################
 
 # Update github secrets with new tokens. 
