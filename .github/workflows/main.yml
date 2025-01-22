@@ -32,6 +32,7 @@ jobs:
             any::sodium
             any::httr
             any::openssl
+            any::blastula
 
       - name: Run R Script with Secret Variables
         env:
