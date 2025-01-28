@@ -19,7 +19,7 @@ library(rio)
 library(sodium)
 library(httr)
 library(openssl)
-library(blastula)
+library(blastula) #need to add to yaml in github actions
 
 # Load environment variabels
 print('Load environment variabels')
@@ -420,61 +420,54 @@ url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?
  # Include Instructions
  # include name of the count
  
- 
- write_csv2(x = AllWarehouseinventory, file = 'Supplier_Inventory.csv')
- 
- # setup to send email
- 
- create_smtp_creds_file(
-   file = "smtp_creds",
-   user = "jasonelder@windance.com",
-   provider = "office365",
-   host = "smtp.office365.com",
-   port = 587,
-   use_ssl = FALSE
- )
- 
- 
- # body of the email
- 
- email <- compose_email(
-   body = md("Good Morning, \n\n Please upload the attached Supplier inventory file to \n
-             the Lightspeed Supplier Invenotry Count.\n
-             Please Follow These Steps: \n
-             1. Login To Lightspeed \n
-             2. Navigate to Inventory > Inventory Counts and select Supplier Warehouse \n
-             3. Or you can follow [this link](https://us.merchantos.com/?name=inventory_count.listings.inventory_counts&form_name=listing&searchstr=&shop_id=2&archived=off&__sort=last_modified&__sort_dir=DESC). \n
-             4. Upload the file \n
-             5. Zero out all other products in `Missed` \n
-             6. Reconcile the count \n\n
-             Thank You, \n 
-             Windance")
- )
- 
- email <- email %>%
-   add_attachment(file = "Supplier_Inventory.csv")
- 
- 
- 
- 
- 
- email %>%
-   smtp_send(
-     from = "jasonelder@windance.com",
-     to = "windance@windance.com",
-     subject = "Demo Output File",
-     credentials = creds(
-       user = "jasonelder@windance.com",
-       pass = "wrangletiall",
-       host = "smtp.office365.com",
-       port = 587,
-       use_ssl = FALSE
-     )
-   )
- 
+ # Save DataFrame to a temporary file
+ temp_file <- tempfile(fileext = ".csv")
+ write.csv(AllWarehouseinventory, temp_file, row.names = FALSE)
  
 
+ # setup to send email
  
+ # steps: need to load user name and password to github secrets. 
+ # and call them in the yaml file. 
+
+msg <- compose_email(
+  body = md(
+    'Test Good Morning, 
+    
+    Please Uplpoad this Supplier Stock Inventory Sheet to Lightspeed. 
+    
+    Thank you, 
+    
+    Jason'
+  )
+)
+
+# add warehouse data as attachment 
+
+
+
+add_attachment( msg,
+                file = temp_file,
+                filename = "Supplier_Warehouse_Inventory.csv")
+
+# credentials
+
+email_creds <- creds_envvar(
+  user = Sys.getenv('GMAIL_USER'),
+  pass_envvar = 'GMAIL_PASSWORD',
+  provider = 'gmail'
+)
+ 
+# send the email
+
+
+  smtp_send(
+    email = msg,
+    to = 'jasonelder@windance.com',
+    from =  'windanceautomation@gmail.com',
+    subject = 'test automation2',
+    credentials = email_creds
+  )
  
  
  
