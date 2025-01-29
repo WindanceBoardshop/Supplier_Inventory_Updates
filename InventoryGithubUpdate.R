@@ -340,11 +340,11 @@ NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble))
 #remove unnecessary  info
 
 NorthItemsDF <- NorthItemsDF %>% 
-  select(itemID, ean) %>% 
+  select(systemSku, ean) %>% 
   filter(ean != '') %>% 
   distinct(ean, .keep_all = T) %>%  #checks for duplicates
   mutate(ean = format(ean, scientific = FALSE))
-# now merge the dataset and exclude all North items that arent in the system yet. 
+# now merge the datasets and exclude all North items that arent in the system yet. 
 
 NorthItemsDF$isinwarehouse <- NorthItemsDF$ean %in% WarehouseNorth$ean
 
@@ -370,6 +370,10 @@ NorthItemsDF <- NorthItemsDF %>%
 # right now this includes Fone and Ezzy invntory
 
 AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF, NorthItemsDF)
+
+write_csv2(x = AllWarehouseinventory,
+           file = 'Supplier_Inventory.csv',
+           append = FALSE)
 
 
 
@@ -412,70 +416,6 @@ url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?
  
  InventoryCountID <- AccountResponse[["cache"]][["json-5f34400b59"]][["InventoryCount"]][[1]][["inventoryCountID"]]
  
-##################################################################################
- 
- # write data to file
- # email file to windance@windance.com 
- # include link to the count
- # Include Instructions
- # include name of the count
- 
- # Save DataFrame to a temporary file
- temp_file <- tempfile(fileext = ".csv")
- write.csv(AllWarehouseinventory, temp_file, row.names = FALSE)
- 
-
- # setup to send email
- 
- # steps: need to load user name and password to github secrets. 
- # and call them in the yaml file. 
-
-msg <- compose_email(
-  body = md(
-    'Test Good Morning, 
-    
-    Please Uplpoad this Supplier Stock Inventory Sheet to Lightspeed. 
-    
-    Thank you, 
-    
-    Jason'
-  )
-)
-
-# add warehouse data as attachment 
-
-
-
-add_attachment( msg,
-                file = temp_file,
-                filename = "Supplier_Warehouse_Inventory.csv")
-
-# credentials
-
-email_creds <- creds_envvar(
-  user = Sys.getenv('GMAIL_USER'),
-  pass_envvar = 'GMAIL_PASSWORD',
-  provider = 'gmail'
-)
- 
-# send the email
-
-
-  smtp_send(
-    email = msg,
-    to = 'jasonelder@windance.com',
-    from =  'windanceautomation@gmail.com',
-    subject = 'test automation2',
-    credentials = email_creds
-  )
- 
- 
- 
- 
- 
- 
-#################################################################################
-
 # Update github secrets with new tokens. 
 ###################################################################################
 
