@@ -333,7 +333,7 @@ while (url != "") {
   Sys.sleep(3)
 }
 
-
+ 
 # big pipe to merge aadn format all North and mytic data
 
 print('wrangle north and mystic data')
