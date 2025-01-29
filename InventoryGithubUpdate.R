@@ -333,39 +333,31 @@ while (url != "") {
   Sys.sleep(3)
 }
 
-#turn data in tibble
 
-NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble))
+# big pipe to merge aadn format all North and mytic data
 
-#remove unnecessary  info
+print('wrangle north and mystic data')
 
-NorthItemsDF <- NorthItemsDF %>% 
-  select(systemSku, ean) %>% 
-  filter(ean != '') %>% 
-  distinct(ean, .keep_all = T) %>%  #checks for duplicates
-  mutate(ean = format(ean, scientific = FALSE))
-# now merge the datasets and exclude all North items that arent in the system yet. 
+NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble)) %>%
+  select(systemSku, ean) %>%
+  filter(!is.na(ean) & ean != "") %>%
+  distinct(ean, .keep_all = TRUE) %>%
+  mutate(ean = as.character(ean)) %>%
+  left_join(WarehouseNorth %>%
+              as_tibble() %>%
+              mutate(ean = as.character(ean)), by = "ean") %>%
+  filter(!is.na(stock)) %>%
+  rename(Inventory = stock) %>%
+  select(systemSku, Inventory) %>%
+  mutate(across(everything(), as.character))  # Ensure all columns are character type
 
-NorthItemsDF$isinwarehouse <- NorthItemsDF$ean %in% WarehouseNorth$ean
-
-# wrangel North data and merge with LSPD 
-
-NorthItemsDF <- NorthItemsDF %>% 
-  filter(isinwarehouse==T) %>% #remove all products not in LSPD
-  select(ean, systemSku) %>%  # keep relevant columns 
-  left_join(WarehouseNorth, by = 'ean') %>% #merge warehouse data into LSPD data
-  mutate(Inventory = stock) %>% # change names
-  filter(!is.na(Inventory)) %>% # remove all NA inventory values
-  select(systemSku, Inventory) %>% # keep only relevant items
-  mutate(systemSku = as.character(systemSku), #change data type
-         Inventory = as.character(Inventory)) #change data type
 
 
 # end of North mystic Data things
 #########################################
 
 # Merge all datasets to upload
-
+print('combine into one big dataset')
 
 # right now this includes Fone and Ezzy invntory
 
