@@ -37,7 +37,7 @@ jobs:
             any::httr
             any::openssl
             any::blastula
-            any:: readr
+            any::readr
 
       - name: Run R Script with Secret Variables
         env:
