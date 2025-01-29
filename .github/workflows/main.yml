@@ -64,6 +64,9 @@ jobs:
           git push
 
       - name: Send Email
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER}} 
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD}}
         run: |
           Rscript InventoryEmailR.R
           
