@@ -65,7 +65,7 @@ email_creds <- creds_envvar(
 smtp_send(
   email = msg,
   to = 'jasonelder@windance.com',
-  cc = 'jasonelder@windance.com'
+  cc = 'jasonelder@windance.com',
   from =  'windanceautomation@gmail.com',
   subject = paste('Windance Supplier Update: ',Sys.Date())
   credentials = email_creds
