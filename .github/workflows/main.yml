@@ -5,6 +5,10 @@ on:
     # Runs at 10:00 PM PST every day (cron is in UTC time zone)
     - cron: '06 06 * * *'
   workflow_dispatch: # Allows manual trigger of the workflow
+  
+permissions:
+  contents: write
+  
 jobs:
   run-r-script:
     runs-on: ubuntu-latest
@@ -33,6 +37,7 @@ jobs:
             any::httr
             any::openssl
             any::blastula
+            any::readr
 
       - name: Run R Script with Secret Variables
         env:
@@ -46,3 +51,22 @@ jobs:
           GH_REPO_NAME: ${{ vars.GH_REPO_NAME}}
         run: |
           Rscript InventoryGithubUpdate.R
+ 
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and Push Changes
+        run: |
+          git add Supplier_Inventory.csv
+          git commit -m "Update Supplier Inventory CSv via GitHub Actions" || echo "No changes to commit"
+          git push
+
+      - name: Send Email
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER}} 
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD}}
+        run: |
+          Rscript InventoryEmailR.R
+          
