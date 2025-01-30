@@ -17,7 +17,7 @@ data <- read_csv2('Supplier_Inventory.csv')
 
 msg <- compose_email(
   body = md(paste(
-    'Test Good Morning, 
+    'Good Morning, 
     
     Please Uplpoad the attached csv file to Lightspeed.
     
