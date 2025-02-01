@@ -23,17 +23,16 @@ msg <- compose_email(
     
     Steps: 
     1. login into Lightspeed
-    2. navigate to Inventory > Inventory Counts 
-    3. filter for `Supplier Warehouses` in the search bar and search 
-    4. select inventory Count: ',Sys.Date(), 'Supplier Update
-    5. Drag and drop attached file into the `Import Items` area. 
-    6. Map Columns: SystemSku = SystemID, and Inventory = Count
-    7. Verify File
-    8. Import
-    9. Navigate to `Missed` 
-    10. select all items
-    11. Press `Zero all selected items`
-    12. Navigate to `Reconcile` and click `Reconcile Inventory`
+    2. navigate to **[Inventory > Inventory Counts](https://us.merchantos.com/?name=inventory_count.listings.inventory_counts&form_name=listing&searchstr=&shop_id=2&archived=off&__sort=last_modified&__sort_dir=DESC)**
+    3. select inventory Count: ',Sys.Date(), 'Supplier Update
+    4. Drag and drop attached file into the `Import Items` area. 
+    5. Map Columns: SystemSku = SystemID, and Inventory = Count
+    6. Verify File
+    7. Import
+    8. Navigate to `Missed` 
+    9. select all items
+    10. Press `Zero all selected items`
+    11. Navigate to `Reconcile` and click `Reconcile Inventory`
     
     
     For a step by step video guide please visit: 
