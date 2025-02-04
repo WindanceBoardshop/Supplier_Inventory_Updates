@@ -314,7 +314,9 @@ print('North and Mystic info')
 
 url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[275,235]'
 
+
 NorthItemsDF <- list()
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN%2C%5B275%2C235%5D&sort=itemID&limit=100&after=WzMzNjU2XQ%3D%3D'
 
 # Loop until url is empty
 while (url != "") {
@@ -356,12 +358,119 @@ NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble)) %>%
 # end of North mystic Data things
 #########################################
 
+# start of slignshot and ride engine data
+
+
+#Eaiser way, no login requred
+
+# Define a proper destination file (e.g., "myfolder.zip")
+dest_file <- "slingshotfolder.zip"
+
+# Download the Dropbox folder as a ZIP file
+download.file(
+  'https://www.dropbox.com/scl/fo/e2ggweadlxqyh106289cf/h?rlkey=q6o0odcceflql15f9olor55lx&st=6774mc3l&dl=1',
+  destfile = dest_file,
+  mode = "wb"
+)
+
+unzip(dest_file, exdir = "slingshotextractedfolder")
+
+slingfilename <- (list.files(path = 'slingshotextractedfolder', full.names = T))
+
+
+slingshot <- read_excel(slingfilename)
+
+# this gets all the slingshot data
+
+# now get all ride engine data
+
+# Define a proper destination file (e.g., "myfolder.zip")
+dest_file <- "rideenginefolder.zip"
+
+# Download the Dropbox folder as a ZIP file
+download.file(
+  'https://www.dropbox.com/scl/fo/04q39p4snxdue0n/h?rlkey=34f7wl3x85hyfgphjmv4tgl7x&st=umu5ko2z&dl=1',
+  destfile = dest_file,
+  mode = "wb"
+)
+
+unzip(dest_file, exdir = "rideengineextractedfolder")
+
+slingfilename <- (list.files(path = 'rideengineextractedfolder', full.names = T))
+
+rideEngine <- read_excel('rideEngine.xlsx')
+
+# filter and wrangle slingshto data
+
+slingshot <- slingshot %>% 
+  select(`UPC Code`, `Location Available`) %>% 
+  mutate( upc = `UPC Code`,
+          Inventory = as.numeric(ifelse(`Location Available` == 'In Stock', 25, `Location Available`))) %>% 
+  select(upc, Inventory) 
+
+# filter and wrangle data ride engine and combine both
+
+Warehouse7nation <- rideEngine %>% 
+  select(`UPC Code`,`Location Available`) %>% 
+  
+  mutate(upc = `UPC Code`,
+         Inventory = as.numeric(ifelse(`Location Available`== 'In Stock', 25, `Location Available`))) %>% 
+  select(upc, Inventory) %>% 
+  bind_rows(slingshot)
+
+###############################
+
+# download all ride engine and slingshot lightspeed product information 
+#  232 = slingshot 
+# 237 = ride engine
+
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[232,237]'
+
+SevenNationItemsDF <- list()
+
+# Loop until url is empty
+while (url != "") {
+  # Make the request to the API
+  AccountResponse <- request(url) %>% #endpoint
+    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
+    req_perform() %>% #perform the action 
+    resp_body_json() #format the response
+  
+  
+  SevenNationItemsDF <- append(SevenNationItemsDF, AccountResponse$Item)
+  
+  
+  # Update url for the next iteration
+  url <- AccountResponse[["@attributes"]][["next"]]
+  Sys.sleep(3)
+}
+
+
+###### 
+
+SevenNationItemsDF2 <- bind_rows(lapply(SevenNationItemsDF, as_tibble)) %>%
+  select(systemSku, upc) %>%
+  filter(!is.na(upc) & upc != "") %>%
+  distinct(upc, .keep_all = TRUE) %>%
+  mutate(upc = as.character(upc)) %>%
+  left_join(Warehouse7nation %>%
+              as_tibble() %>%
+              mutate(upc = as.character(upc)), by = "upc") %>%
+  filter(!is.na(Inventory)) %>%
+  select(systemSku, Inventory) %>%
+  mutate(across(everything(), as.character))  # Ensure all columns are character type
+
+
+
+# end of slingshot ride engine data things
+##########################################
+
 # Merge all datasets to upload
 print('combine into one big dataset')
 
 # right now this includes Fone and Ezzy invntory
 
-AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF, NorthItemsDF)
+AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF, NorthItemsDF, SevenNationItemsDF2)
 
 write_csv2(x = AllWarehouseinventory,
            file = 'Supplier_Inventory.csv',
