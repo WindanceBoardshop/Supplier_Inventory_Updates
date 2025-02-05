@@ -446,6 +446,7 @@ while (url != "") {
 }
 
 
+
 ###### 
 
 SevenNationItemsDF2 <- bind_rows(lapply(SevenNationItemsDF, as_tibble)) %>%
