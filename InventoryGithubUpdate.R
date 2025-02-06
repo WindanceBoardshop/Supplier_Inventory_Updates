@@ -360,7 +360,7 @@ NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble)) %>%
 
 # start of slignshot and ride engine data
 
-
+print('get slingshot and ride engine warehouse data')
 #Eaiser way, no login requred
 
 # Define a proper destination file (e.g., "myfolder.zip")
@@ -423,6 +423,7 @@ Warehouse7nation <- rideEngine %>%
 # download all ride engine and slingshot lightspeed product information 
 #  232 = slingshot 
 # 237 = ride engine
+print('get slingshot oride engine lightspeed data')
 
 url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[232,237]'
 
