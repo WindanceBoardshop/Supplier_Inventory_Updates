@@ -153,6 +153,9 @@ WarehouseEzzy <- read.csv('https://docs.google.com/spreadsheets/d/14RRJs7QEvblDK
 
 EzzyItemsDF$isinwarehouse <- EzzyItemsDF$manufacturerSku %in% WarehouseEzzy$SKU
 
+# export Ezzy items not in Lightspeed
+
+
 # data wrangeling
 EzzyItemsDF <- EzzyItemsDF %>% 
   filter(isinwarehouse==T) %>% # remove all rows that arent in LSPD
@@ -232,6 +235,7 @@ WarehouseFone <- WarehouseFone %>%
 
 FoneItemsDF$isinwarehouse <- FoneItemsDF$ean %in% WarehouseFone$EAN
 
+# export F-One items not in LSPD
 
 # data wrangleing
 
@@ -352,7 +356,6 @@ NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble)) %>%
   rename(Inventory = stock) %>%
   select(systemSku, Inventory) %>%
   mutate(across(everything(), as.character))  # Ensure all columns are character type
-
 
 
 # end of North mystic Data things
@@ -492,6 +495,12 @@ print('combine into one big dataset')
 # right now this includes Fone and Ezzy invntory
 
 AllWarehouseinventory <- bind_rows(EzzyItemsDF, FoneItemsDF, NorthItemsDF, SevenNationItemsDF2)
+
+# make all negative values  =zero (because LSPD doesnt like negatives) 
+
+AllWarehouseinventory$Inventory <- ifelse(as.numeric(AllWarehouseinventory$Inventory) < 0, '0', AllWarehouseinventory$Inventory)
+
+
 
 write_csv2(x = AllWarehouseinventory,
            file = 'Supplier_Inventory.csv',
