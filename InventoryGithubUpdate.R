@@ -372,16 +372,16 @@ download.file(
   destfile = dest_file,
   mode = "wb"
 )
-
+print('downloaded sling data')
 unzip(dest_file, exdir = "slingshotextractedfolder")
-
+print('unzipped sling data')
 slingfilename <- (list.files(path = 'slingshotextractedfolder', full.names = T))
-
+print('got sling file name')
 
 slingshot <- read_excel(slingfilename)
-
+print('read sling into r')
 # this gets all the slingshot data
-
+print('sling done')
 # now get all ride engine data
 
 # Define a proper destination file (e.g., "myfolder.zip")
