@@ -381,6 +381,14 @@ print('got sling file name')
 slingshot <- read_excel(slingfilename)
 print('read sling into r')
 # this gets all the slingshot data
+
+# now delete all the slingshot folders
+
+unlink(dest_file, recursive = T)
+unlink('slingshotextractedfolder', recursive = T)
+
+print('deleted all slingshot data from directories after loading it into R')
+
 print('sling done')
 # now get all ride engine data
 
@@ -396,11 +404,21 @@ download.file(
 
 unzip(dest_file, exdir = "rideengineextractedfolder")
 
-slingfilename <- (list.files(path = 'rideengineextractedfolder', full.names = T))
+ridefilename <- (list.files(path = 'rideengineextractedfolder', full.names = T))
 
-rideEngine <- read_excel('rideEngine.xlsx')
+rideEngine <- read_excel(ridefilename)
 
-# filter and wrangle slingshto data
+# delete ride engine files 
+
+unlink(dest_file, recursive = T)
+unlink('rideengineextractedfolder', recursive = T)
+
+print('deleted all ride engine data from directories after loading it into R')
+
+print('ride done')
+
+# filter and wrangle slingshot data
+print('wrangle sling')
 
 slingshot <- slingshot %>% 
   select(`UPC Code`, `Location Available`) %>% 
@@ -409,6 +427,7 @@ slingshot <- slingshot %>%
   select(upc, Inventory) 
 
 # filter and wrangle data ride engine and combine both
+print('wrangle ride and merge with sling')
 
 Warehouse7nation <- rideEngine %>% 
   select(`UPC Code`,`Location Available`) %>% 
@@ -423,7 +442,7 @@ Warehouse7nation <- rideEngine %>%
 # download all ride engine and slingshot lightspeed product information 
 #  232 = slingshot 
 # 237 = ride engine
-print('get slingshot oride engine lightspeed data')
+print('get slingshot and ride engine lightspeed data')
 
 url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[232,237]'
 
