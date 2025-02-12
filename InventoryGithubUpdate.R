@@ -111,6 +111,12 @@ print('Ezzy info')
 
 url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=142'
 
+AccountResponse <- request(url) %>% #endpoint
+  req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
+  req_perform()
+
+print( paste('Bucket size  is ', stringr::str_split_i(AccountResponse[["headers"]][["x-ls-api-bucket-level"]], '/', 2)))
+
 
 EzzyItemsDF <- list()
 
@@ -502,7 +508,7 @@ AllWarehouseinventory$Inventory <- ifelse(as.numeric(AllWarehouseinventory$Inven
 
 
 
-write_csv2(x = AllWarehouseinventory,
+write_csv(x = AllWarehouseinventory,
            file = 'Supplier_Inventory.csv',
            append = FALSE)
 
