@@ -371,7 +371,7 @@ FoneItemsDF <- FoneItemsDF %>%
   filter(ean != '') %>% 
   distinct(ean, .keep_all = T) #checks for duplicates
 
-
+################################################################################
 # get and wrangle fone data from warehouse
 
 # Define the URL for the first sheet in .xlsx format
@@ -389,22 +389,81 @@ download.file(url, temp_file, mode = "wb")
 WarehouseFoneNames <- excel_sheets(temp_file)
 WarehouseFone <- list()
 
-df <- read_excel(temp_file, sheet = 2, skip = 3)
-
-WarehouseFone$df1 <- read_excel(temp_file, sheet = 3, skip = 4)
-WarehouseFone$df2 <- read_excel(temp_file, sheet = 4, skip = 3)
-WarehouseFone$df3 <- read_excel(temp_file, sheet = 5, skip = 3)
-WarehouseFone$df4 <- read_excel(temp_file, sheet = 6, skip = 3)
-WarehouseFone$df5 <- read_excel(temp_file, sheet = 7, skip = 3)
-WarehouseFone$df6 <- read_excel(temp_file, sheet = 8, skip = 3)
-WarehouseFone$df7 <- read_excel(temp_file, sheet = 9, skip = 3)
-WarehouseFone$df8 <- read_excel(temp_file, sheet = 10, skip = 3)
-WarehouseFone$df9 <- read_excel(temp_file, sheet = 11, skip = 3)
-WarehouseFone$df10 <- read_excel(temp_file, sheet = 12, skip = 3)
-WarehouseFone$df11 <- read_excel(temp_file, sheet = 13, skip = 3)
+WarehouseFone$df0 <- read_excel(temp_file, sheet = 1, skip = 3)
+WarehouseFone$df1 <- read_excel(temp_file, sheet = 2, skip = 3)
+WarehouseFone$df2 <- read_excel(temp_file, sheet = 3, skip = 4)
+WarehouseFone$df3 <- read_excel(temp_file, sheet = 4, skip = 3)
+WarehouseFone$df4 <- read_excel(temp_file, sheet = 5, skip = 3)
+WarehouseFone$df5 <- read_excel(temp_file, sheet = 6, skip = 3)
+WarehouseFone$df6 <- read_excel(temp_file, sheet = 7, skip = 3)
+WarehouseFone$df7 <- read_excel(temp_file, sheet = 8, skip = 2)
+WarehouseFone$df8 <- read_excel(temp_file, sheet = 9, skip = 3)
+WarehouseFone$df9 <- read_excel(temp_file, sheet = 10, skip = 2)
+WarehouseFone$df10 <- read_excel(temp_file, sheet = 11, skip = 3)
+WarehouseFone$df11 <- read_excel(temp_file, sheet = 12, skip = 3)
+WarehouseFone$df12 <- read_excel(temp_file, sheet = 13, skip = 3)
 WarehouseFone$df12 <- read_excel(temp_file, sheet = 14, skip = 3)
 
 
+# now rename stock cols: 
+
+# Find the first column that contains "stock"
+# Function to rename the first matching "stock" column
+rename_stock_column <- function(df) {
+  stock_col_index <- which(str_detect(names(df), regex("stock", ignore_case = TRUE)))[1]
+  
+  if (!is.na(stock_col_index)) {
+    names(df)[stock_col_index] <- "stock"
+    
+    df <- df %>%
+      mutate(stock = as.character(stock))
+  
+  }
+  
+  return(df)
+}
+
+rename_ean_column <- function(df) {
+  stock_col_index <- which(str_detect(names(df), regex("ean", ignore_case = TRUE)))[1]
+  
+  if (!is.na(stock_col_index)) {
+    names(df)[stock_col_index] <- "ean"
+    
+    # Convert the column to character type
+    df <- df %>%
+      mutate(ean = as.character(ean))
+  }
+  
+  return(df)
+}
+
+# now apply both functions to all dfs in the Fone warehouse
+
+WarehouseFone <- lapply(WarehouseFone, rename_stock_column)
+
+WarehouseFone <- lapply(WarehouseFone, rename_ean_column)
+
+# now exclude dfs that dont have stock and ean cols. 
+
+WarehouseFone <- Filter(function(df) "stock" %in% names(df), WarehouseFone)
+
+WarehouseFone <- Filter(function(df) "ean" %in% names(df), WarehouseFone)
+
+
+
+
+WarehouseAllFone <- bind_rows(lapply(WarehouseFone, function(df) {
+  df %>% select(ean, stock)  # Select only EAN and stock columns
+})) 
+
+# now remove all rows that dont have a number in them
+
+WarehouseAllFone <- WarehouseAllFone %>% 
+  filter(str_detect(ean, "[0-9]")) %>% 
+  filter(str_detect(stock, "[0-9]"))
+  
+
+################################################################################
 
 
 
@@ -412,7 +471,7 @@ WarehouseFone$df12 <- read_excel(temp_file, sheet = 14, skip = 3)
 
 #check what is in LSPD and what is not
 
-FoneItemsDF$isinwarehouse <- FoneItemsDF$ean %in% WarehouseFone$EAN
+FoneItemsDF$isinwarehouse <- FoneItemsDF$ean %in% WarehouseAllFone$ean
 
 # export F-One items not in LSPD
 
@@ -421,7 +480,7 @@ FoneItemsDF$isinwarehouse <- FoneItemsDF$ean %in% WarehouseFone$EAN
 FoneItemsDF <- FoneItemsDF %>% 
   filter(isinwarehouse==T) %>% #remove all products not in LSPD
   select(ean, systemSku) %>%  # keep relevant columns 
-  left_join(WarehouseFone, by = c('ean' = 'EAN')) %>% #merge warehouse data into LSPD data
+  left_join(WarehouseAllFone, by = 'ean') %>% #merge warehouse data into LSPD data
   mutate(Inventory = .[[3]]) %>% # change names
   filter(!is.na(Inventory)) %>% # remove all NA inventpry values
   select(systemSku, Inventory) %>% # keep only relevant items
@@ -457,7 +516,7 @@ print('North and Mystic info')
 # the IN filter allows to search for multiple vendors. should consolidate all of the vendor calls. 275 235 
 
 NorthItemsDF <- allLSPD2 %>% 
-  filter(defaultVendorID == c(275,235))
+  filter(defaultVendorID %in% c(275,235))
 
 # big pipe to merge aadn format all North and mytic data
 
@@ -567,7 +626,7 @@ Warehouse7nation <- rideEngine %>%
 print('get slingshot and ride engine lightspeed data')
 
 SevenNationItemsDF <- allLSPD2 %>% 
-  filter(defaultVendorID == c(232, 237))
+  filter(defaultVendorID %in% c(232, 237))
 
 # wrangle seven nation data
 SevenNationItemsDF2 <- SevenNationItemsDF %>%
