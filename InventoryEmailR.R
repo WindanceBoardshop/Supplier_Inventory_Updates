@@ -19,7 +19,7 @@ msg <- compose_email(
   body = md(paste(
     'Good Morning, 
     
-    Please Uplpoad the attached csv file to Lightspeed.
+    Please Upload the attached csv file to Lightspeed.
     
     Steps: 
     1. login into Lightspeed
