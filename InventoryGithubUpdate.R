@@ -1,3 +1,7 @@
+# I want to update this code so that there is only 1 lightspeed api call for products
+
+
+
 # Part 0: Libraries
 
 # steps to do: 
@@ -33,11 +37,12 @@ LSPDAUTH$AccessToken <- Sys.getenv("LSPDAUTH_LSPDACCESSTOKEN")
 
 
 
-# Part 1: Lightspeed Authenitcation Flow. 
+# Part 0.1: Lightspeed Authenitcation Flow. 
 
 # Unused refresh tokens expire after 30 days
 
-# These Variables should be saved in a file that is hidden in github. the vars should be pulled from the file when needed and updated in the file everytime a new set of tokens is created. 
+# These Variables should be saved in a file that is hidden in github. 
+# the vars should be pulled from the file when needed and updated in the file everytime a new set of tokens is created. 
 
 # Use Refresh token to get access token
 
@@ -68,6 +73,218 @@ LSPDAUTH$AccessToken<- response_content$access_token
 LSPDAUTH$LSPDRefreshToken <- response_content$refresh_token
 
 LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
+
+################################################################################
+
+# Part 1. get all product information from lightspeed
+print('part 1.0 get lightspeed product data')
+
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?'
+
+allLSPD <- list()
+page <- 0
+
+# Loop until url is empty
+while (url != "") {
+  # Make the request to the API
+  AccountResponse <- request(url) %>% #endpoint
+    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
+    req_perform() 
+  
+  
+  # if the bucket get too full, this will empty it alot 
+  print(AccountResponse[["headers"]][["x-ls-api-bucket-level"]])
+  if(as.numeric(str_split_1(AccountResponse[["headers"]][["x-ls-api-bucket-level"]], '/'))[1] >= as.numeric(str_split_1(AccountResponse[["headers"]][["x-ls-api-bucket-level"]], '/'))[2]-10){
+    Sys.sleep(20)} else {
+      print('bucket is ok' )}
+  
+  AccountResponse <- AccountResponse %>% 
+    resp_body_json()
+  
+  allLSPD <- append(allLSPD, AccountResponse$Item)
+  
+  
+  # Update url for the next iteration
+  url <- AccountResponse[["@attributes"]][["next"]]
+  page <- page +1
+  
+  print(paste('pulling page ',page, 'from lightspeed. 100 items per page.'))
+  
+}  
+
+# this makes the lightspeed data very tidy
+
+allLSPD2 <- allLSPD %>% 
+  tibble %>% 
+  unnest_wider(1) %>% 
+  unnest_wider(Prices) %>% 
+  # unnest_longer(ItemPrice) %>% 
+  unnest_wider(ItemPrice, names_sep = '') %>% 
+  rename(Price = ItemPrice1,
+         MSRP = ItemPrice2) %>% 
+  unnest_wider(Price, names_sep = '_') %>% 
+  unnest_wider(MSRP, names_sep = '_')
+#pivot_wider(names_from = useType, values_from = amount)
+
+# end get LSPD item information
+################################################################################
+
+# get vendor data from lightspeed
+
+print(' Part 1.1 get vendor data from lightspeed')
+
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Vendor.json?'
+
+
+# Loop until url is empty
+# Make the request to the API
+AccountResponse <- request(url) %>% #endpoint
+  req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
+  req_perform() %>% #perfom the action 
+  resp_body_json() #format the response
+
+vendorsLSPD <- AccountResponse[['Vendor']] %>% 
+  tibble %>%
+  unnest_wider(1)%>% 
+  select(vendorID,
+         name)
+
+# end get LSPD information 
+
+################################################################################
+# create LSPD inventory count
+
+
+# Part 1.1: creating a new count, adding items to the count, reconciling the count. 
+print('Part 1.1: creating a new count, adding items to the count, reconciling the count')
+#  create new count
+
+# this works 
+url<- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json"
+
+payload <- list(
+  name = paste0(Sys.Date(), " Supplier Update"),
+  shopID = "2"
+)
+
+
+response <- request(url) %>%
+  req_headers(
+    Authorization = paste0("Bearer ", LSPDAUTH$AccessToken),
+    `Content-Type` = "application/json"
+  ) %>%
+  req_body_json(payload) %>%
+  req_method("POST") %>%
+  req_perform() %>% 
+  resp_body_json()
+
+
+
+# this returns the counts with order created from most recent to least recent. ergo, the important one will always be number 1.
+
+url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?shopID=2&sort=-inventoryCountID'
+
+AccountResponse <- request(url) %>% 
+  req_headers(Authorization = paste0('Bearer ', LSPDAUTH$AccessToken)) %>% 
+  req_perform()
+
+resp_body_json(AccountResponse)
+
+InventoryCountID <- AccountResponse[["cache"]][["json-5f34400b59"]][["InventoryCount"]][[1]][["inventoryCountID"]]
+
+# Update github secrets with new tokens. 
+##############################################################################
+
+##############################################################################
+# update values in github
+##############################################################################
+
+# start of Github Var updates
+
+# Github information and variables. load these variables from the system environment
+
+# keep this for github to run
+GH <- list()
+GH$REPO_OWNER <- Sys.getenv("GH_REPO_OWNER")
+GH$REPO_NAME <- Sys.getenv("GH_REPO_NAME")
+GH$PAT <- Sys.getenv("GH_PAT")
+
+
+# Construct the URL dynamically
+url <- paste0("https://api.github.com/repos/", 
+              GH$REPO_OWNER, "/", 
+              GH$REPO_NAME,
+              "/actions/secrets/public-key")
+
+# Make the API request to fetch the public key
+response <- request(url) %>%
+  req_auth_bearer_token(GH$PAT) %>%
+  req_headers(Accept = "application/vnd.github+json") %>%
+  req_perform()
+
+# Parse the JSON response
+public_key_data <- resp_body_json(response)
+
+# Extract the public key and key ID
+GH$PUBLIC_KEY <- public_key_data$key
+GH$KEY_ID <- public_key_data$key_id
+
+#####################################################################################
+#got the keys now upload the LSPD tokens. 
+
+
+
+
+# Encrypt the tokens values with Sodium
+
+#######################################################
+
+print('update LSPD tokens in github')
+# First do the refresh token
+
+# Step 1: Encrypt the secret value using LibSodium
+# values can not be in lists or dfs. 
+
+refresh_token <- charToRaw(LSPDAUTH$LSPDRefreshToken)
+public_key <- base64_decode(GH$PUBLIC_KEY)
+
+GH$LSPD_REFRESH_TOKEN <- simple_encrypt(refresh_token, public_key)
+
+# Base64 encode the encrypted secret
+GH$LSPD_REFRESH_TOKEN <- base64enc::base64encode(GH$LSPD_REFRESH_TOKEN)
+
+
+###################################################
+
+# Step 2: Prepare the payload
+payload <- list(
+  encrypted_value = GH$LSPD_REFRESH_TOKEN,
+  key_id = GH$KEY_ID)
+
+# Step 3: Make the API request to update the secret
+secret_url <- paste0("https://api.github.com/repos/", GH$REPO_OWNER, "/", GH$REPO_NAME, "/actions/secrets/", 'LSPDAUTH_LSPDREFRESHTOKEN')
+
+response_secret <- request(secret_url) %>%
+  req_auth_bearer_token(GH$PAT) %>%
+  req_method("PUT") %>%
+  req_headers(
+    Accept = "application/vnd.github+json") %>%
+  req_body_json(payload) %>%
+  req_perform()
+
+# Step 5: Check the response
+if (resp_status(response_secret) == 201) {
+  print("Secret created successfully!")
+} else if (resp_status(response_secret) == 204) {
+  print("Secret updated successfully!")
+} else {
+  print("Failed to create/update secret: ", resp_body_string(response_secret))
+}
+
+# end of github token update
+# end of inventory count 
+# end of lightspeed api pulls
+################################################################################ 
 
 
 # Part 2: getting product data From Brands. 
@@ -104,58 +321,18 @@ LSPDinfo$ChinookVendorID <- 221
 
 LSPDinfo$WarehouseID <- 2
 
+################################################################################
 
-## Ezzy
-# Get ezzy info from LSDP
-print('Ezzy info')
-
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=142'
-
-AccountResponse <- request(url) %>% #endpoint
-  req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
-  req_perform()
-
-print( paste('Bucket size  is ', stringr::str_split_i(AccountResponse[["headers"]][["x-ls-api-bucket-level"]], '/', 2)))
-
-
-EzzyItemsDF <- list()
-
-
-# Loop until url is empty
-while (url != "") {
-  # Make the request to the API
-  AccountResponse <- request(url) %>% #endpoint
-    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
-    req_perform() %>% #perfom the action 
-    resp_body_json() #format the response
-  
-  
-  
-  EzzyItemsDF <- append(EzzyItemsDF, AccountResponse$Item)
-  
-  
-  # Update url for the next iteration
-  url <- AccountResponse[["@attributes"]][["next"]]
-}
-
-
-# change list to df
-EzzyItemsDF <- bind_rows(lapply(EzzyItemsDF, as_tibble))
-
-#remove unnecessary  info
-
-EzzyItemsDF <- EzzyItemsDF %>% 
-  select(systemSku, manufacturerSku) %>% 
-  filter(manufacturerSku != '') %>% 
-  distinct(manufacturerSku, .keep_all = T) #checks for duplicates
-
-
+# get ezzy warehouse data
 
 # get and wrangle Ezzy Warehouse data
 
 WarehouseEzzy <- read.csv('https://docs.google.com/spreadsheets/d/14RRJs7QEvblDK2OJL0vKOmh-tdGXrwAo/export?format=csv')
 
 #remove all items that are not in LSPD
+
+EzzyItemsDF <- allLSPD2 %>% 
+  filter(defaultVendorID == 142)
 
 EzzyItemsDF$isinwarehouse <- EzzyItemsDF$manufacturerSku %in% WarehouseEzzy$SKU
 
@@ -174,37 +351,18 @@ EzzyItemsDF <- EzzyItemsDF %>%
          Inventory = as.character(Inventory)) #change data types
 
 
-
-
-## Fone
+# end Ezzy data
+################################################################################
+## Start Fone
 # get FOne data from LSPD while loop
 
 # Initialize url with the first value
 print('F-one info')
 
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=274'
-
-FoneItemsDF <- list()
-
-# Loop until url is empty
-while (url != "") {
-  # Make the request to the API
-  AccountResponse <- request(url) %>% #endpoint
-    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
-    req_perform() %>% #perfom the action 
-    resp_body_json() #format the response
-  
-  
-  FoneItemsDF <- append(FoneItemsDF, AccountResponse$Item)
-  
-  
-  # Update url for the next iteration
-  url <- AccountResponse[["@attributes"]][["next"]]
-}
-
 #turn data in tibble
 
-FoneItemsDF <- bind_rows(lapply(FoneItemsDF, as_tibble))
+FoneItemsDF <- allLSPD2 %>% 
+  filter(defaultVendorID == 274)
 
 #remove unnecessary  info
 
@@ -226,12 +384,27 @@ temp_file <- tempfile(fileext = ".xlsx")
 # Download the file from the Google Sheets URL
 download.file(url, temp_file, mode = "wb")
 
-# Import the first sheet from the downloaded Excel file
-WarehouseFone <- import(temp_file)
+# Import the first sheet from the downloaded Excel file\
 
-WarehouseFone <- WarehouseFone %>% 
-  select(EAN, STOCK...9) %>% 
-  mutate(EAN = as.character(EAN))
+WarehouseFoneNames <- excel_sheets(temp_file)
+WarehouseFone <- list()
+
+df <- read_excel(temp_file, sheet = 2, skip = 3)
+
+WarehouseFone$df1 <- read_excel(temp_file, sheet = 3, skip = 4)
+WarehouseFone$df2 <- read_excel(temp_file, sheet = 4, skip = 3)
+WarehouseFone$df3 <- read_excel(temp_file, sheet = 5, skip = 3)
+WarehouseFone$df4 <- read_excel(temp_file, sheet = 6, skip = 3)
+WarehouseFone$df5 <- read_excel(temp_file, sheet = 7, skip = 3)
+WarehouseFone$df6 <- read_excel(temp_file, sheet = 8, skip = 3)
+WarehouseFone$df7 <- read_excel(temp_file, sheet = 9, skip = 3)
+WarehouseFone$df8 <- read_excel(temp_file, sheet = 10, skip = 3)
+WarehouseFone$df9 <- read_excel(temp_file, sheet = 11, skip = 3)
+WarehouseFone$df10 <- read_excel(temp_file, sheet = 12, skip = 3)
+WarehouseFone$df11 <- read_excel(temp_file, sheet = 13, skip = 3)
+WarehouseFone$df12 <- read_excel(temp_file, sheet = 14, skip = 3)
+
+
 
 
 
@@ -256,46 +429,7 @@ FoneItemsDF <- FoneItemsDF %>%
          Inventory = as.character(Inventory)) #change data type
 
 # end of Fone Data
-#########################################
-# check token time left
-
-if(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()) <= 30){
-  
-  Sys.sleep(60)
-  
-  print('Updating Token') 
-  #get new access token
-  
-  token_url <- "https://cloud.lightspeedapp.com/auth/oauth/token"
-  
-  body <- list(
-    refresh_token = LSPDAUTH$LSPDRefreshToken,
-    client_id = LSPDAUTH$LSPDClientID,
-    client_secret = LSPDAUTH$LSPDClientSecretKey,
-    grant_type = 'refresh_token'
-  )
-  
-  response <- request(token_url) %>% 
-    req_body_json(body) %>% 
-    req_method('POST') %>% 
-    req_perform()
-  
-  response_content <- resp_body_json(response)
-  
-  #update access token in LSPDAUTH
-  
-  LSPDAUTH$AccessToken<- response_content$access_token
-  LSPDAUTH$LSPDRefreshToken <- response_content$refresh_token
-  
-  LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
-  
-  
-}else(print(paste0('token has ',round(LSPDAUTH$ExpirationTime - as.numeric(Sys.time()),2), ' seconds left' )))
-
-
-# end of check token time left
-# end of cheeck bucket level
-########################################
+################################################################################
 
 # Start of North and Mystic Data
 # North Mystic from brand products
@@ -320,37 +454,16 @@ WarehouseNorth <- WarehouseNorth %>%
 print('North and Mystic info')
 
 
-# the IN filter allows to search for multiple vendors. should consolidate all of the vendor calls. 
+# the IN filter allows to search for multiple vendors. should consolidate all of the vendor calls. 275 235 
 
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[275,235]'
+NorthItemsDF <- allLSPD2 %>% 
+  filter(defaultVendorID == c(275,235))
 
-
-NorthItemsDF <- list()
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN%2C%5B275%2C235%5D&sort=itemID&limit=100&after=WzMzNjU2XQ%3D%3D'
-
-# Loop until url is empty
-while (url != "") {
-  # Make the request to the API
-  AccountResponse <- request(url) %>% #endpoint
-    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
-    req_perform() %>% #perform the action 
-    resp_body_json() #format the response
-  
-  
-  NorthItemsDF <- append(NorthItemsDF, AccountResponse$Item)
-  
-  
-  # Update url for the next iteration
-  url <- AccountResponse[["@attributes"]][["next"]]
-  Sys.sleep(3)
-}
-
- 
 # big pipe to merge aadn format all North and mytic data
 
 print('wrangle north and mystic data')
 
-NorthItemsDF <- bind_rows(lapply(NorthItemsDF, as_tibble)) %>%
+NorthItemsDF <- NorthItemsDF %>%
   select(systemSku, ean) %>%
   filter(!is.na(ean) & ean != "") %>%
   distinct(ean, .keep_all = TRUE) %>%
@@ -453,32 +566,11 @@ Warehouse7nation <- rideEngine %>%
 # 237 = ride engine
 print('get slingshot and ride engine lightspeed data')
 
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/Item.json?defaultVendorID=IN,[232,237]'
+SevenNationItemsDF <- allLSPD2 %>% 
+  filter(defaultVendorID == c(232, 237))
 
-SevenNationItemsDF <- list()
-
-# Loop until url is empty
-while (url != "") {
-  # Make the request to the API
-  AccountResponse <- request(url) %>% #endpoint
-    req_headers(Authorization = paste0('Bearer ', response_content$access_token)) %>% #access info
-    req_perform() %>% #perform the action 
-    resp_body_json() #format the response
-  
-  
-  SevenNationItemsDF <- append(SevenNationItemsDF, AccountResponse$Item)
-  
-  
-  # Update url for the next iteration
-  url <- AccountResponse[["@attributes"]][["next"]]
-  Sys.sleep(3)
-}
-
-
-
-###### 
-
-SevenNationItemsDF2 <- bind_rows(lapply(SevenNationItemsDF, as_tibble)) %>%
+# wrangle seven nation data
+SevenNationItemsDF2 <- SevenNationItemsDF %>%
   select(systemSku, upc) %>%
   filter(!is.na(upc) & upc != "") %>%
   distinct(upc, .keep_all = TRUE) %>%
@@ -493,7 +585,7 @@ SevenNationItemsDF2 <- bind_rows(lapply(SevenNationItemsDF, as_tibble)) %>%
 
 
 # end of slingshot ride engine data things
-##########################################
+################################################################################
 
 # Merge all datasets to upload
 print('combine into one big dataset')
@@ -509,147 +601,7 @@ AllWarehouseinventory$Inventory <- ifelse(as.numeric(AllWarehouseinventory$Inven
 
 
 write_csv(x = AllWarehouseinventory,
-           file = 'Supplier_Inventory.csv',
-           append = FALSE)
-
-
-
-# Part 5: creating a new count, adding items to the count, reconciling the count. 
-print('Part 5: creating a new count, adding items to the count, reconciling the count')
-#  create new count
-
-# this works 
-url<- "https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json"
-
-payload <- list(
-  name = paste0(Sys.Date(), " Supplier Update"),
-  shopID = "2"
-)
-
-
-response <- request(url) %>%
-  req_headers(
-    Authorization = paste0("Bearer ", LSPDAUTH$AccessToken),
-    `Content-Type` = "application/json"
-  ) %>%
-  req_body_json(payload) %>%
-  req_method("POST") %>%
-  req_perform() %>% 
-  resp_body_json()
-
-
-
-# get id for count
-
-# this returns the counts with order created from most recent to least recent. ergo, the important one will always be number 1.
-
-url <- 'https://api.lightspeedapp.com/API/V3/Account/295409/InventoryCount.json?shopID=2&sort=-inventoryCountID'
- 
- AccountResponse <- request(url) %>% 
-   req_headers(Authorization = paste0('Bearer ', LSPDAUTH$AccessToken)) %>% 
-   req_perform()
- 
- resp_body_json(AccountResponse)
- 
- InventoryCountID <- AccountResponse[["cache"]][["json-5f34400b59"]][["InventoryCount"]][[1]][["inventoryCountID"]]
- 
-# Update github secrets with new tokens. 
-###################################################################################
-
-###################################################################################
-# update values in github
-###################################################################################
-
-# start of Github Var updates
-
-# Github information and variables. load these variables from the system environment
-
-# keep this for github to run
-GH <- list()
-GH$REPO_OWNER <- Sys.getenv("GH_REPO_OWNER")
-GH$REPO_NAME <- Sys.getenv("GH_REPO_NAME")
-GH$PAT <- Sys.getenv("GH_PAT")
-
-
-# Construct the URL dynamically
-url <- paste0("https://api.github.com/repos/", 
-              GH$REPO_OWNER, "/", 
-              GH$REPO_NAME,
-              "/actions/secrets/public-key")
-
-# Make the API request to fetch the public key
-response <- request(url) %>%
-  req_auth_bearer_token(GH$PAT) %>%
-  req_headers(Accept = "application/vnd.github+json") %>%
-  req_perform()
-
-# Parse the JSON response
-public_key_data <- resp_body_json(response)
-
-# Extract the public key and key ID
-GH$PUBLIC_KEY <- public_key_data$key
-GH$KEY_ID <- public_key_data$key_id
-
-#####################################################################################
-#got the keys now upload the LSPD tokens. 
-
-
-
-
-# Encrypt the tokens values with Sodium
-
-#######################################################
-
-print('update LSPD tokens in github')
-# First do the refresh token
-
-# Step 1: Encrypt the secret value using LibSodium
-# values can not be in lists or dfs. 
-
-refresh_token <- charToRaw(LSPDAUTH$LSPDRefreshToken)
-public_key <- base64_decode(GH$PUBLIC_KEY)
-
-GH$LSPD_REFRESH_TOKEN <- simple_encrypt(refresh_token, public_key)
-
-# Base64 encode the encrypted secret
-GH$LSPD_REFRESH_TOKEN <- base64enc::base64encode(GH$LSPD_REFRESH_TOKEN)
-
-
-###################################################
-
-# Step 2: Prepare the payload
-payload <- list(
-  encrypted_value = GH$LSPD_REFRESH_TOKEN,
-  key_id = GH$KEY_ID)
-
-# Step 3: Make the API request to update the secret
-secret_url <- paste0("https://api.github.com/repos/", GH$REPO_OWNER, "/", GH$REPO_NAME, "/actions/secrets/", 'LSPDAUTH_LSPDREFRESHTOKEN')
-
-response_secret <- request(secret_url) %>%
-  req_auth_bearer_token(GH$PAT) %>%
-  req_method("PUT") %>%
-  req_headers(
-    Accept = "application/vnd.github+json") %>%
-  req_body_json(payload) %>%
-  req_perform()
-
-# Step 5: Check the response
-if (resp_status(response_secret) == 201) {
-  print("Secret created successfully!")
-} else if (resp_status(response_secret) == 204) {
-  print("Secret updated successfully!")
-} else {
-  print("Failed to create/update secret: ", resp_body_string(response_secret))
-}
-
-
-
-# now do the Access Token. (this probably isnt important because we make a new one each time. )
-
-
-
-
-
-
+          file = 'Supplier_Inventory.csv',
+          append = FALSE)
 
 
