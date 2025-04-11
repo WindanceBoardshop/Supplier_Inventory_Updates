@@ -115,6 +115,7 @@ while (url != "") {
 # this makes the lightspeed data very tidy
 
 allLSPD2 <- allLSPD %>% 
+  keep(~ length(.) == 27) %>%
   tibble %>% 
   unnest_wider(1) %>% 
   unnest_wider(Prices) %>% 
@@ -123,7 +124,7 @@ allLSPD2 <- allLSPD %>%
   rename(Price = ItemPrice1,
          MSRP = ItemPrice2) %>% 
   unnest_wider(Price, names_sep = '_') %>% 
-  unnest_wider(MSRP, names_sep = '_')
+  unnest_wider(MSRP, names_sep = '_') 
 #pivot_wider(names_from = useType, values_from = amount)
 
 # end get LSPD item information
