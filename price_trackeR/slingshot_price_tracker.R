@@ -187,7 +187,7 @@ LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
  sling_LSPD_price_comparison <- allLSPD3 %>% 
    left_join(slingdata2, by = c('manufacturerSku' = 'slingshot_variants_sku')) %>% # merge datasets
    filter(!is.na(slingshot_variants_price)) %>%  # this gets rid of all the variants that are not on slingshots website. 
- mutate( price_difference = as.numeric(slingshot_variants_price) - as.numeric(Price_amount),
+ mutate( price_difference = round(as.numeric(slingshot_variants_price) - as.numeric(Price_amount),2),
          update_price = price_difference < 0) %>% 
    filter(update_price == TRUE)
  
