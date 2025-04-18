@@ -205,3 +205,83 @@ LSPDAUTH$ExpirationTime <- as.numeric(Sys.time())+response_content$expires_in
  
 # end write csv to repo
 
+ # start scrape ride engine data
+ 
+ print('start scrape Ride Engine data')
+ 
+ # Base URL
+ url <- "https://rideengine.com/products.json?limit=250&page=" # check that this is actually the correct web address
+ page <- 1
+ all_products <- list()  # Initialize empty list
+ 
+ repeat {
+   # Construct the full URL
+   fullurl <- paste0(url, page)
+   
+   # Perform the GET request and parse JSON
+   response <- request(fullurl) %>% 
+     req_method("GET") %>% 
+     req_perform() %>% 
+     resp_body_json()
+   
+   # Check if products exist
+   if (length(response$products) == 0) {
+     message("No more products found. Stopping download.")
+     break
+   }
+   
+   # Append to master list
+   all_products <- append(all_products, response$products)
+   
+   # Print progress
+   message("Fetched page ", page, " with ", length(response$products), " products.")
+   
+   # Increment page number
+   page <- page + 1
+ }
+ 
+ # unnest data and format
+ 
+ rideenginedata <- all_products %>% 
+   tibble %>% 
+   unnest_wider(1) %>% 
+   unnest_longer(variants) %>% 
+   unnest_wider(variants,names_sep = '_')
+ 
+ print('end scrape ride engine data')
+ 
+ # end scrape ride engine data
+ 
+ # start ride engine data wrangle (price and Id) 
+
+ rideeneginedata2 <- rideenginedata %>% 
+   select(variants_sku, variants_price) %>% 
+   mutate( rideengine_variants_sku = trimws(format(variants_sku, scientific = FALSE)),
+           rideengine_variants_price = variants_price) %>% 
+   select(rideengine_variants_sku,
+          rideengine_variants_price)
+ # end ride engine data wrangle
+ 
+ # start LSPD subsetting
+ print('start wrangle LSPD data for ride engine')
+ 
+ allLSPD4 <- allLSPD2 %>% 
+   filter(defaultVendorID == 237 & manufacturerSku != '') %>% 
+   select(description, upc, manufacturerSku, Price_amount, MSRP_amount)
+ 
+ 
+ # Start merge datasets
+ print(' start merge datasets')
+ rideengine_LSPD_price_comparison <- allLSPD4 %>% 
+   left_join(rideeneginedata2, by = c('manufacturerSku' = 'rideengine_variants_sku')) %>% # merge datasets
+   filter(!is.na(rideengine_variants_price)) %>%  # this gets rid of all the variants that are not on slingshots website. 
+   mutate( price_difference = round(as.numeric(rideengine_variants_price) - as.numeric(Price_amount),2),
+           update_price = price_difference < 0) %>% 
+   filter(update_price == TRUE)
+ 
+ 
+ 
+ print(' end   merge datasets')
+ # end  merge datasets
+ # end ride engine data wrangle
+ 
